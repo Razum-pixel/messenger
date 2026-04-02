@@ -1,0 +1,404 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Гостевой чат университета</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+  </head>
+  <body class="min-h-screen bg-slate-950 text-slate-100">
+    <div class="mx-auto max-w-5xl px-4 py-8">
+      <div
+        class="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-b from-slate-900/80 to-slate-900/40 shadow-2xl shadow-cyan-500/10"
+      >
+        <div class="absolute inset-0 opacity-60">
+          <div class="absolute -left-24 -top-24 h-72 w-72 rounded-full bg-cyan-500/20 blur-3xl"></div>
+          <div class="absolute -right-24 -bottom-24 h-72 w-72 rounded-full bg-fuchsia-500/20 blur-3xl"></div>
+        </div>
+
+        <div class="relative p-6 sm:p-8">
+          <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h1 class="text-2xl font-semibold tracking-tight sm:text-3xl">Гостевой чат университета</h1>
+              <p class="mt-1 text-sm text-slate-300">
+                WebSocket (STOMP) чат для гостей. Сообщения видны всем подключённым.
+              </p>
+            </div>
+
+            <div class="flex items-center gap-3">
+              <span id="statusDot" class="h-2.5 w-2.5 rounded-full bg-amber-400"></span>
+              <span id="statusText" class="text-sm text-slate-300">Не подключено</span>
+              <button
+                id="connectBtn"
+                class="rounded-xl bg-cyan-500 px-4 py-2 text-sm font-medium text-slate-950 shadow-lg shadow-cyan-500/20 hover:bg-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-300/60 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Подключиться
+              </button>
+              <button
+                id="disconnectBtn"
+                class="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-slate-100 hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-white/20 disabled:cursor-not-allowed disabled:opacity-50"
+                disabled
+              >
+                Отключиться
+              </button>
+            </div>
+          </div>
+
+          <div class="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
+            <div class="lg:col-span-1">
+              <div class="rounded-2xl border border-white/10 bg-white/5 p-4">
+                <label class="text-sm font-medium text-slate-200" for="nameInput">Ваше имя</label>
+                <input
+                  id="nameInput"
+                  type="text"
+                  maxlength="32"
+                  placeholder="Например: Айдана"
+                  class="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/40 px-3 py-2 text-slate-100 placeholder:text-slate-500 focus:border-cyan-400/60 focus:outline-none focus:ring-2 focus:ring-cyan-400/20"
+                />
+                <p class="mt-2 text-xs text-slate-400">
+                  Можно оставить пустым — тогда будет сгенерирован “Гость-…”.
+                </p>
+              </div>
+
+              <div class="mt-4 rounded-2xl border border-white/10 bg-white/5 p-4">
+                <div class="flex items-center justify-between">
+                  <p class="text-sm font-medium text-slate-200">Подсказки</p>
+                  <button
+                    id="clearBtn"
+                    class="text-xs font-medium text-slate-300 hover:text-white"
+                    type="button"
+                  >
+                    Очистить чат
+                  </button>
+                </div>
+                <ul class="mt-3 space-y-2 text-sm text-slate-300">
+                  <li class="flex gap-2">
+                    <span class="mt-1 h-1.5 w-1.5 rounded-full bg-cyan-400"></span>
+                    <span>Enter — отправить сообщение</span>
+                  </li>
+                  <li class="flex gap-2">
+                    <span class="mt-1 h-1.5 w-1.5 rounded-full bg-fuchsia-400"></span>
+                    <span>Shift+Enter — новая строка</span>
+                  </li>
+                  <li class="flex gap-2">
+                    <span class="mt-1 h-1.5 w-1.5 rounded-full bg-amber-400"></span>
+                    <span>Сообщения идут в <code class="rounded bg-black/30 px-1 py-0.5">/topic/public</code></span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+
+            <div class="lg:col-span-2">
+              <div class="rounded-2xl border border-white/10 bg-white/5">
+                <div class="flex items-center justify-between border-b border-white/10 px-4 py-3">
+                  <p class="text-sm font-medium text-slate-200">Сообщения</p>
+                  <p id="roomMeta" class="text-xs text-slate-400">endpoint: <code>/ws</code></p>
+                </div>
+
+                <div id="messages" class="h-[420px] overflow-y-auto px-4 py-4">
+                  <div class="rounded-xl border border-white/10 bg-slate-950/40 p-4 text-sm text-slate-300">
+                    Нажмите “Подключиться”, чтобы войти в чат.
+                  </div>
+                </div>
+
+                <div class="border-t border-white/10 p-4">
+                  <div class="flex flex-col gap-3 sm:flex-row">
+                    <textarea
+                      id="messageInput"
+                      rows="2"
+                      maxlength="2000"
+                      placeholder="Напишите сообщение…"
+                      class="min-h-[44px] w-full resize-none rounded-xl border border-white/10 bg-slate-950/40 px-3 py-2 text-slate-100 placeholder:text-slate-500 focus:border-cyan-400/60 focus:outline-none focus:ring-2 focus:ring-cyan-400/20 disabled:opacity-50"
+                      disabled
+                    ></textarea>
+                    <button
+                      id="sendBtn"
+                      class="h-[44px] shrink-0 rounded-xl bg-fuchsia-500 px-5 text-sm font-medium text-slate-950 shadow-lg shadow-fuchsia-500/20 hover:bg-fuchsia-400 focus:outline-none focus:ring-2 focus:ring-fuchsia-300/60 disabled:cursor-not-allowed disabled:opacity-50"
+                      disabled
+                    >
+                      Отправить
+                    </button>
+                  </div>
+                  <div class="mt-2 flex items-center justify-between text-xs text-slate-400">
+                    <span id="hintText">Сначала подключитесь к чату.</span>
+                    <span id="charCount">0 / 2000</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <p class="mt-6 text-center text-xs text-slate-500">
+        Spring Boot + STOMP + SockJS • Tailwind CSS CDN
+      </p>
+    </div>
+
+    <script>
+      const statusDot = document.getElementById("statusDot");
+      const statusText = document.getElementById("statusText");
+      const connectBtn = document.getElementById("connectBtn");
+      const disconnectBtn = document.getElementById("disconnectBtn");
+      const clearBtn = document.getElementById("clearBtn");
+
+      const nameInput = document.getElementById("nameInput");
+      const messagesEl = document.getElementById("messages");
+      const messageInput = document.getElementById("messageInput");
+      const sendBtn = document.getElementById("sendBtn");
+      const hintText = document.getElementById("hintText");
+      const charCount = document.getElementById("charCount");
+
+      const WS_ENDPOINT = "/ws";
+      const TOPIC_PUBLIC = "/topic/public";
+      const APP_JOIN = "/app/chat.join";
+      const APP_SEND = "/app/chat.send";
+
+      let stompClient = null;
+      let connected = false;
+      let mySender = null;
+
+      const USER_COLORS = [
+        { r: 34, g: 211, b: 238 }, // cyan-400
+        { r: 244, g: 114, b: 182 }, // pink-400
+        { r: 167, g: 139, b: 250 }, // violet-400
+        { r: 74, g: 222, b: 128 }, // green-400
+        { r: 251, g: 191, b: 36 }, // amber-400
+        { r: 96, g: 165, b: 250 }, // blue-400
+        { r: 163, g: 230, b: 53 }, // lime-400
+        { r: 45, g: 212, b: 191 }, // teal-400
+        { r: 250, g: 204, b: 21 }, // yellow-400
+        { r: 248, g: 113, b: 113 }, // red-400
+      ];
+
+      function setStatus(state, text) {
+        statusText.textContent = text;
+        statusDot.className = "h-2.5 w-2.5 rounded-full " + (state === "ok" ? "bg-emerald-400" : state === "err" ? "bg-rose-400" : "bg-amber-400");
+      }
+
+      function setUiConnected(isConnected) {
+        connected = isConnected;
+        connectBtn.disabled = isConnected;
+        disconnectBtn.disabled = !isConnected;
+        messageInput.disabled = !isConnected;
+        sendBtn.disabled = !isConnected;
+        hintText.textContent = isConnected ? "Вы в чате. Пишите сообщение и нажимайте Enter." : "Сначала подключитесь к чату.";
+        if (isConnected) {
+          messageInput.focus();
+        }
+      }
+
+      function escapeHtml(str) {
+        return String(str ?? "")
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#039;");
+      }
+
+      function formatTime(ts) {
+        try {
+          const d = new Date(ts);
+          return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+        } catch {
+          return "";
+        }
+      }
+
+      function scrollToBottom() {
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+      }
+
+      function ensureMessagesAreaReady() {
+        if (messagesEl.children.length === 1 && messagesEl.firstElementChild?.textContent?.includes("Нажмите")) {
+          messagesEl.innerHTML = "";
+        }
+      }
+
+      function addSystemMessage(text) {
+        ensureMessagesAreaReady();
+        const el = document.createElement("div");
+        el.className = "mb-3 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-300";
+        el.innerHTML = `<span class="text-slate-400">${escapeHtml(text)}</span>`;
+        messagesEl.appendChild(el);
+        scrollToBottom();
+      }
+
+      function hashString(str) {
+        // djb2
+        let h = 5381;
+        for (let i = 0; i < str.length; i++) {
+          h = ((h << 5) + h) ^ str.charCodeAt(i);
+        }
+        return h >>> 0;
+      }
+
+      function colorForSender(sender) {
+        const key = (sender || "Гость").trim().toLowerCase();
+        const idx = hashString(key) % USER_COLORS.length;
+        return USER_COLORS[idx];
+      }
+
+      function addChatMessage({ sender, content, timestamp }, kind) {
+        ensureMessagesAreaReady();
+        const isMine = kind === "mine";
+        const wrapper = document.createElement("div");
+        wrapper.className = "mb-3 flex " + (isMine ? "justify-end" : "justify-start");
+
+        const bubble = document.createElement("div");
+        bubble.className = "max-w-[85%] rounded-2xl border px-3 py-2 shadow-sm";
+        const c = colorForSender(sender);
+        const borderA = isMine ? 0.42 : 0.28;
+        const bgA = isMine ? 0.18 : 0.12;
+        bubble.style.borderColor = `rgba(${c.r}, ${c.g}, ${c.b}, ${borderA})`;
+        bubble.style.backgroundColor = `rgba(${c.r}, ${c.g}, ${c.b}, ${bgA})`;
+
+        const meta = document.createElement("div");
+        meta.className = "flex items-center justify-between gap-3 text-xs text-slate-300/80";
+        meta.innerHTML = `<span class="font-medium" data-sender>${escapeHtml(sender || "Гость")}</span>
+          <span></span>`;
+        const senderEl = meta.querySelector("[data-sender]");
+        if (senderEl) {
+          senderEl.style.color = `rgb(${c.r}, ${c.g}, ${c.b})`;
+        }
+
+        const bodyRow = document.createElement("div");
+        bodyRow.className = "mt-1 flex items-end gap-3";
+
+        const body = document.createElement("div");
+        body.className = "min-w-0 flex-1 whitespace-pre-wrap break-words text-sm text-slate-100";
+        body.textContent = content ?? "";
+
+        const timeEl = document.createElement("span");
+        timeEl.className = "shrink-0 text-xs text-slate-300/70";
+        timeEl.textContent = formatTime(timestamp);
+
+        bubble.appendChild(meta);
+        bodyRow.appendChild(body);
+        bodyRow.appendChild(timeEl);
+        bubble.appendChild(bodyRow);
+        wrapper.appendChild(bubble);
+        messagesEl.appendChild(wrapper);
+        scrollToBottom();
+      }
+
+      function parsePayload(payload) {
+        try {
+          return JSON.parse(payload);
+        } catch {
+          return null;
+        }
+      }
+
+      function connect() {
+        if (connected) return;
+        setStatus("wait", "Подключение…");
+
+        mySender = (nameInput.value || "").trim() || null;
+
+        const socket = new SockJS(WS_ENDPOINT);
+        stompClient = Stomp.over(socket);
+        stompClient.debug = null;
+
+        stompClient.connect(
+          {},
+          () => {
+            setStatus("ok", "Подключено");
+            setUiConnected(true);
+            addSystemMessage("Вы подключились к чату.");
+
+            stompClient.subscribe(TOPIC_PUBLIC, (frame) => {
+              const msg = parsePayload(frame.body);
+              if (!msg) return;
+
+              if (msg.type === "JOIN" || msg.type === "LEAVE") {
+                addSystemMessage(msg.content || (msg.type === "JOIN" ? "Кто-то вошёл" : "Кто-то вышел"));
+                return;
+              }
+
+              const sender = msg.sender || "Гость";
+              const kind = mySender && sender === mySender ? "mine" : "other";
+              addChatMessage(msg, kind);
+            });
+
+            stompClient.send(
+              APP_JOIN,
+              {},
+              JSON.stringify({
+                type: "JOIN",
+                sender: mySender,
+                content: "",
+                timestamp: Date.now(),
+              })
+            );
+          },
+          (err) => {
+            console.error(err);
+            setStatus("err", "Ошибка подключения");
+            setUiConnected(false);
+            addSystemMessage("Не удалось подключиться. Проверьте, что сервер запущен.");
+          }
+        );
+      }
+
+      function disconnect() {
+        if (!stompClient) return;
+        try {
+          stompClient.disconnect(() => {});
+        } catch {}
+        stompClient = null;
+        setStatus("wait", "Не подключено");
+        setUiConnected(false);
+        addSystemMessage("Вы отключились от чата.");
+      }
+
+      function sendMessage() {
+        const content = (messageInput.value || "").trim();
+        if (!content || !stompClient || !connected) return;
+
+        const payload = {
+          type: "CHAT",
+          sender: mySender,
+          content,
+          timestamp: Date.now(),
+        };
+
+        stompClient.send(APP_SEND, {}, JSON.stringify(payload));
+        messageInput.value = "";
+        updateCharCount();
+        messageInput.focus();
+      }
+
+      function updateCharCount() {
+        charCount.textContent = `${(messageInput.value || "").length} / 2000`;
+      }
+
+      connectBtn.addEventListener("click", connect);
+      disconnectBtn.addEventListener("click", disconnect);
+
+      clearBtn.addEventListener("click", () => {
+        messagesEl.innerHTML = "";
+        addSystemMessage("Чат очищен локально (только у вас).");
+      });
+
+      messageInput.addEventListener("input", updateCharCount);
+
+      messageInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" && !e.shiftKey) {
+          e.preventDefault();
+          sendMessage();
+        }
+      });
+
+      sendBtn.addEventListener("click", sendMessage);
+
+      setStatus("wait", "Не подключено");
+      setUiConnected(false);
+      updateCharCount();
+    </script>
+  </body>
+</html>
+
