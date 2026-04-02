@@ -321,7 +321,7 @@
                 <div class="rounded-2xl border border-white/10 bg-white/5 p-6">
                   <h2 class="text-lg font-semibold text-slate-100">О проекте</h2>
                   <p class="mt-2 text-sm text-slate-300">
-                    “Гостевой чат университета” — простой мессенджер для гостей без регистрации: подключились, выбрали имя и общаетесь в общем канале.
+                    “Чат для общения” — простой мессенджер без регистрации: подключились, выбрали имя и общаетесь в общем канале.
                   </p>
 
                   <div class="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -427,7 +427,7 @@
       const APP_SEND = "/app/chat.send";
       const APP_TYPING = "/app/chat.typing";
       const API_UPLOAD = "/api/upload";
-      const STICKER_URLS = Array.from({ length: 16 }, (_, i) => `/stickers/sticker-${String(i + 1).padStart(2, "0")}.png`);
+      const STICKER_URLS = Array.from({ length: 16 }, (_, i) => `/stickers/sticker-${i + 1}.png`);
 
       let stompClient = null;
       let connected = false;
