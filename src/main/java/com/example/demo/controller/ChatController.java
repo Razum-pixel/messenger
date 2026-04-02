@@ -2,6 +2,9 @@ package com.example.demo.controller;
 
 import com.example.demo.model.ChatMessage;
 import com.example.demo.model.ChatMessage.MessageType;
+import com.example.demo.model.HistorySnapshot;
+import com.example.demo.model.UsersUpdate;
+import com.example.demo.service.ChatStateService;
 import java.security.Principal;
 import java.util.UUID;
 import org.springframework.messaging.handler.annotation.MessageMapping;
@@ -14,24 +17,45 @@ import org.springframework.stereotype.Controller;
 public class ChatController {
 
 	private static final String TOPIC_PUBLIC = "/topic/public";
+	private static final String TOPIC_USERS = "/topic/users";
+	private static final String TOPIC_HISTORY_PREFIX = "/topic/history.";
 	private final SimpMessagingTemplate messagingTemplate;
+	private final ChatStateService chatState;
 
-	public ChatController(SimpMessagingTemplate messagingTemplate) {
+	public ChatController(SimpMessagingTemplate messagingTemplate, ChatStateService chatState) {
 		this.messagingTemplate = messagingTemplate;
+		this.chatState = chatState;
 	}
 
 	@MessageMapping("/chat.join")
 	public void join(@Payload ChatMessage message, SimpMessageHeaderAccessor headers, Principal principal) {
 		String sender = normalizeSender(message != null ? message.getSender() : null, principal);
 		headers.getSessionAttributes().put("sender", sender);
+		String clientId = message != null ? message.getClientId() : null;
+		if (clientId != null && !clientId.isBlank()) {
+			headers.getSessionAttributes().put("clientId", clientId);
+		}
+
+		long now = System.currentTimeMillis();
+		chatState.upsertSession(headers.getSessionId(), sender, now, clientId);
 
 		ChatMessage out = new ChatMessage();
 		out.setType(MessageType.JOIN);
 		out.setSender(sender);
 		out.setContent(sender + " присоединился(ась) к чату");
-		out.setTimestamp(System.currentTimeMillis());
+		out.setTimestamp(now);
 
 		messagingTemplate.convertAndSend(TOPIC_PUBLIC, out);
+
+		UsersUpdate update = new UsersUpdate(chatState.onlineCount(), chatState.onlineUsers());
+		messagingTemplate.convertAndSend(TOPIC_USERS, update);
+
+		if (clientId != null && !clientId.isBlank()) {
+			messagingTemplate.convertAndSend(
+				TOPIC_HISTORY_PREFIX + clientId,
+				new HistorySnapshot("SNAPSHOT", chatState.historySnapshot())
+			);
+		}
 	}
 
 	@MessageMapping("/chat.send")
@@ -52,6 +76,7 @@ public class ChatController {
 		out.setContent(message != null ? message.getContent() : null);
 		out.setTimestamp(System.currentTimeMillis());
 
+		chatState.addToHistory(out);
 		messagingTemplate.convertAndSend(TOPIC_PUBLIC, out);
 	}
 

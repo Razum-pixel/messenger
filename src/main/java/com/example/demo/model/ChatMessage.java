@@ -12,6 +12,7 @@ public class ChatMessage {
 	private String sender;
 	private String content;
 	private long timestamp;
+	private String clientId;
 
 	public ChatMessage() {
 	}
@@ -53,6 +54,14 @@ public class ChatMessage {
 
 	public void setTimestamp(long timestamp) {
 		this.timestamp = timestamp;
+	}
+
+	public String getClientId() {
+		return clientId;
+	}
+
+	public void setClientId(String clientId) {
+		this.clientId = clientId;
 	}
 }
 
