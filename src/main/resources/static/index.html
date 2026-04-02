@@ -8,21 +8,43 @@
     <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
     <style>
-      @keyframes popIn {
+      @keyframes fadeSlideUp {
         0% {
           opacity: 0;
-          transform: translateY(6px) scale(0.98);
-          filter: blur(2px);
+          transform: translateY(10px);
         }
         100% {
           opacity: 1;
-          transform: translateY(0) scale(1);
-          filter: blur(0);
+          transform: translateY(0);
         }
       }
-      .msg-pop {
-        animation: popIn 220ms ease-out both;
+      .msg-fade-slide {
+        animation: fadeSlideUp 320ms ease-out both;
       }
+
+      @keyframes sendBtnPulse {
+        0% {
+          transform: scale(1);
+        }
+        45% {
+          transform: scale(0.92);
+        }
+        100% {
+          transform: scale(1);
+        }
+      }
+      .send-btn-animate {
+        animation: sendBtnPulse 220ms ease-out;
+      }
+
+      #messageInput {
+        transition: opacity 0.22s ease, filter 0.22s ease;
+      }
+      #messageInput.input-clearing {
+        opacity: 0.25;
+        filter: blur(1px);
+      }
+
     </style>
   </head>
   <body class="min-h-screen bg-slate-950 text-slate-100">
@@ -166,16 +188,78 @@
                         </div>
                       </div>
 
+                      <div
+                        id="typingBar"
+                        class="hidden border-t border-white/5 px-4 pb-2 pt-1 text-xs text-slate-400"
+                        aria-live="polite"
+                      >
+                        <span id="typingText"></span>
+                      </div>
+
                       <div class="border-t border-white/10 p-4">
-                        <div class="flex flex-col gap-3 sm:flex-row">
-                          <textarea
-                            id="messageInput"
-                            rows="2"
-                            maxlength="2000"
-                            placeholder="Напишите сообщение…"
-                            class="min-h-[44px] w-full resize-none rounded-xl border border-white/10 bg-slate-950/40 px-3 py-2 text-slate-100 placeholder:text-slate-500 focus:border-cyan-400/60 focus:outline-none focus:ring-2 focus:ring-cyan-400/20 disabled:opacity-50"
-                            disabled
-                          ></textarea>
+                        <input
+                          id="fileInput"
+                          type="file"
+                          class="hidden"
+                          accept="image/*,video/*,*/*"
+                        />
+
+                        <div id="filePreviewWrap" class="mb-3 hidden rounded-xl border border-white/10 bg-slate-950/40 p-3">
+                          <img id="filePreviewImg" class="hidden max-h-48 max-w-full rounded-lg object-contain" alt="" />
+                          <p id="filePreviewName" class="mt-2 text-xs text-slate-400"></p>
+                        </div>
+
+                        <div id="uploadProgressWrap" class="mb-3 hidden">
+                          <div class="h-2 w-full overflow-hidden rounded-full bg-white/10">
+                            <div
+                              id="uploadProgressBar"
+                              class="h-full w-0 rounded-full bg-cyan-500 transition-[width] duration-150 ease-out"
+                            ></div>
+                          </div>
+                          <p id="uploadProgressText" class="mt-1 text-xs text-slate-400">0%</p>
+                        </div>
+
+                        <div class="flex flex-col gap-3 sm:flex-row sm:items-end">
+                          <div class="relative flex min-w-0 flex-1 gap-2">
+                            <div class="relative shrink-0">
+                              <button
+                                type="button"
+                                id="stickerBtn"
+                                title="Стикеры"
+                                class="flex h-[44px] w-[44px] shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-xl leading-none text-slate-200 hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-cyan-400/30 disabled:cursor-not-allowed disabled:opacity-40"
+                                disabled
+                              >
+                                <span aria-hidden="true">🙂</span>
+                              </button>
+                              <div
+                                id="stickerPanel"
+                                class="absolute bottom-[calc(100%+0.5rem)] left-0 z-50 hidden w-[248px] rounded-2xl border border-white/10 bg-slate-900/95 p-2 shadow-2xl shadow-black/40 backdrop-blur-md"
+                                role="dialog"
+                                aria-label="Панель стикеров"
+                              >
+                                <div id="stickerGrid" class="grid grid-cols-4 gap-2"></div>
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              id="attachBtn"
+                              title="Прикрепить файл"
+                              class="flex h-[44px] w-[44px] shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-slate-200 hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-cyan-400/30 disabled:cursor-not-allowed disabled:opacity-40"
+                              disabled
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19A4 4 0 1 1 21 12.84l-8.66 8.66a2.5 2.5 0 0 1-3.54-3.54l8.49-8.49" />
+                              </svg>
+                            </button>
+                            <textarea
+                              id="messageInput"
+                              rows="2"
+                              maxlength="2000"
+                              placeholder="Напишите сообщение…"
+                              class="min-h-[44px] w-full resize-none rounded-xl border border-white/10 bg-slate-950/40 px-3 py-2 text-slate-100 placeholder:text-slate-500 focus:border-cyan-400/60 focus:outline-none focus:ring-2 focus:ring-cyan-400/20 disabled:opacity-50"
+                              disabled
+                            ></textarea>
+                          </div>
                           <button
                             id="sendBtn"
                             class="h-[44px] shrink-0 rounded-xl bg-fuchsia-500 px-5 text-sm font-medium text-slate-950 shadow-lg shadow-fuchsia-500/20 hover:bg-fuchsia-400 focus:outline-none focus:ring-2 focus:ring-fuchsia-300/60 disabled:cursor-not-allowed disabled:opacity-50"
@@ -312,6 +396,19 @@
       const sendBtn = document.getElementById("sendBtn");
       const hintText = document.getElementById("hintText");
       const charCount = document.getElementById("charCount");
+      const stickerBtn = document.getElementById("stickerBtn");
+      const stickerPanel = document.getElementById("stickerPanel");
+      const stickerGrid = document.getElementById("stickerGrid");
+      const attachBtn = document.getElementById("attachBtn");
+      const fileInput = document.getElementById("fileInput");
+      const filePreviewWrap = document.getElementById("filePreviewWrap");
+      const filePreviewImg = document.getElementById("filePreviewImg");
+      const filePreviewName = document.getElementById("filePreviewName");
+      const uploadProgressWrap = document.getElementById("uploadProgressWrap");
+      const uploadProgressBar = document.getElementById("uploadProgressBar");
+      const uploadProgressText = document.getElementById("uploadProgressText");
+      const typingBar = document.getElementById("typingBar");
+      const typingText = document.getElementById("typingText");
       const onlineUsersEl = document.getElementById("onlineUsers");
       const historyListEl = document.getElementById("historyList");
       const tabButtons = Array.from(document.querySelectorAll(".tab-btn"));
@@ -324,15 +421,25 @@
 
       const WS_ENDPOINT = "/ws";
       const TOPIC_PUBLIC = "/topic/public";
+      const TOPIC_TYPING = "/topic/typing";
       const TOPIC_USERS = "/topic/users";
       const APP_JOIN = "/app/chat.join";
       const APP_SEND = "/app/chat.send";
+      const APP_TYPING = "/app/chat.typing";
+      const API_UPLOAD = "/api/upload";
+      const STICKER_URLS = Array.from({ length: 16 }, (_, i) => `/stickers/sticker-${String(i + 1).padStart(2, "0")}.png`);
 
       let stompClient = null;
       let connected = false;
       let mySender = null;
       let clientId = null;
       let serverHistory = [];
+      const typingPeers = new Map();
+      let typingSendTimer = null;
+      let lastTypingEmit = 0;
+      const TYPING_THROTTLE_MS = 300;
+      let previewObjectUrl = null;
+      let uploadInProgress = false;
 
       const USER_COLORS = [
         { r: 34, g: 211, b: 238 }, // cyan-400
@@ -358,6 +465,9 @@
         disconnectBtn.disabled = !isConnected;
         messageInput.disabled = !isConnected;
         sendBtn.disabled = !isConnected;
+        if (attachBtn) attachBtn.disabled = !isConnected;
+        if (stickerBtn) stickerBtn.disabled = !isConnected;
+        if (!isConnected && stickerPanel) stickerPanel.classList.add("hidden");
         hintText.textContent = isConnected ? "Вы в чате. Пишите сообщение и нажимайте Enter." : "Сначала подключитесь к чату.";
         if (isConnected) {
           messageInput.focus();
@@ -405,7 +515,7 @@
       function addSystemMessage(text) {
         ensureMessagesAreaReady();
         const el = document.createElement("div");
-        el.className = "msg-pop mb-3 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-300";
+        el.className = "msg-fade-slide mb-3 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-300";
         el.innerHTML = `<span class="text-slate-400">${escapeHtml(text)}</span>`;
         messagesEl.appendChild(el);
         scrollToBottom();
@@ -426,11 +536,65 @@
         return USER_COLORS[idx];
       }
 
-      function addChatMessage({ sender, content, timestamp }, kind) {
+      function guessKind(mime, url) {
+        const m = (mime || "").toLowerCase();
+        if (m.startsWith("image/")) return "image";
+        if (m.startsWith("video/")) return "video";
+        const u = (url || "").toLowerCase();
+        if (/\.(png|jpe?g|gif|webp|svg|bmp|ico)$/.test(u)) return "image";
+        if (/\.(mp4|webm|ogg|mov|m4v)$/.test(u)) return "video";
+        return "file";
+      }
+
+      function appendAttachmentTo(container, msg) {
+        const url = msg.attachmentUrl;
+        if (!url) return;
+        const kind = guessKind(msg.mimeType, url);
+        if (kind === "image") {
+          const img = document.createElement("img");
+          img.src = url;
+          img.alt = msg.originalFilename || "";
+          img.loading = "lazy";
+          if (url.includes("/stickers/")) {
+            img.width = 120;
+            img.height = 120;
+            img.className =
+              "mt-2 h-[120px] w-[120px] shrink-0 rounded-xl border border-white/10 object-cover";
+          } else {
+            img.className =
+              "mt-2 max-h-64 max-w-full rounded-xl border border-white/10 object-contain";
+          }
+          container.appendChild(img);
+          return;
+        }
+        if (kind === "video") {
+          const v = document.createElement("video");
+          v.src = url;
+          v.controls = true;
+          v.preload = "metadata";
+          v.className = "mt-2 max-h-80 w-full max-w-full rounded-xl border border-white/10";
+          container.appendChild(v);
+          return;
+        }
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = msg.originalFilename || "";
+        a.rel = "noopener noreferrer";
+        a.target = "_blank";
+        a.className =
+          "mt-2 inline-flex max-w-full items-center gap-2 break-all rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-cyan-200 hover:bg-white/10";
+        a.textContent = msg.originalFilename || "Скачать файл";
+        container.appendChild(a);
+      }
+
+      function addChatMessage(msg, kind) {
+        const sender = msg.sender || "Гость";
+        const content = msg.content ?? "";
+        const timestamp = msg.timestamp;
         ensureMessagesAreaReady();
         const isMine = kind === "mine";
         const wrapper = document.createElement("div");
-        wrapper.className = "msg-pop mb-3 flex " + (isMine ? "justify-end" : "justify-start");
+        wrapper.className = "msg-fade-slide mb-3 flex " + (isMine ? "justify-end" : "justify-start");
 
         const bubble = document.createElement("div");
         bubble.className = "max-w-[85%] rounded-2xl border px-3 py-2 shadow-sm";
@@ -452,16 +616,26 @@
         const bodyRow = document.createElement("div");
         bodyRow.className = "mt-1 flex items-end gap-3";
 
-        const body = document.createElement("div");
-        body.className = "min-w-0 flex-1 whitespace-pre-wrap break-words text-sm text-slate-100";
-        body.textContent = content ?? "";
+        const col = document.createElement("div");
+        col.className = "min-w-0 flex-1 flex flex-col gap-0";
+
+        const text = String(content || "").trim();
+        if (text) {
+          const body = document.createElement("div");
+          body.className = "whitespace-pre-wrap break-words text-sm text-slate-100";
+          body.textContent = content ?? "";
+          col.appendChild(body);
+        }
+        if (msg.attachmentUrl) {
+          appendAttachmentTo(col, msg);
+        }
 
         const timeEl = document.createElement("span");
-        timeEl.className = "shrink-0 text-xs text-slate-300/70";
+        timeEl.className = "shrink-0 self-end text-xs text-slate-300/70";
         timeEl.textContent = formatTime(timestamp);
 
         bubble.appendChild(meta);
-        bodyRow.appendChild(body);
+        bodyRow.appendChild(col);
         bodyRow.appendChild(timeEl);
         bubble.appendChild(bodyRow);
         wrapper.appendChild(bubble);
@@ -565,12 +739,21 @@
           meta.appendChild(left);
           meta.appendChild(right);
 
-          const body = document.createElement("div");
-          body.className = "mt-2 whitespace-pre-wrap break-words text-sm text-slate-100";
-          body.textContent = m?.content ?? "";
+          const bodyCol = document.createElement("div");
+          bodyCol.className = "mt-2 space-y-2";
+          const t = String(m?.content ?? "").trim();
+          if (t) {
+            const body = document.createElement("div");
+            body.className = "whitespace-pre-wrap break-words text-sm text-slate-100";
+            body.textContent = m.content;
+            bodyCol.appendChild(body);
+          }
+          if (m?.attachmentUrl) {
+            appendAttachmentTo(bodyCol, m);
+          }
 
           row.appendChild(meta);
-          row.appendChild(body);
+          row.appendChild(bodyCol);
           historyListEl.appendChild(row);
         }
       }
@@ -580,6 +763,184 @@
           return JSON.parse(payload);
         } catch {
           return null;
+        }
+      }
+
+      function animateSendButton() {
+        sendBtn.classList.remove("send-btn-animate");
+        void sendBtn.offsetWidth;
+        sendBtn.classList.add("send-btn-animate");
+      }
+
+      function clearMessageInputSmoothly() {
+        return new Promise((resolve) => {
+          messageInput.classList.add("input-clearing");
+          window.setTimeout(() => {
+            messageInput.value = "";
+            messageInput.classList.remove("input-clearing");
+            updateCharCount();
+            resolve();
+          }, 220);
+        });
+      }
+
+      function updateTypingIndicator() {
+        if (!typingBar || !typingText) return;
+        const names = Array.from(typingPeers.keys());
+        if (names.length === 0) {
+          typingBar.classList.add("hidden");
+          typingText.textContent = "";
+          return;
+        }
+        typingBar.classList.remove("hidden");
+        typingText.textContent =
+          names.length === 1
+            ? `${names[0]} печатает…`
+            : `${names.slice(0, 4).join(", ")}${names.length > 4 ? "…" : ""} печатают…`;
+      }
+
+      function handleTypingFromServer(msg) {
+        if (!msg || msg.type !== "TYPING") return;
+        if (msg.clientId && clientId && msg.clientId === clientId) return;
+        const name = String(msg.sender || "Гость").trim() || "Гость";
+        if (mySender && name === mySender) return;
+
+        const prev = typingPeers.get(name);
+        if (prev) clearTimeout(prev);
+        const id = setTimeout(() => {
+          typingPeers.delete(name);
+          updateTypingIndicator();
+        }, 2000);
+        typingPeers.set(name, id);
+        updateTypingIndicator();
+      }
+
+      function emitTypingSignal() {
+        if (!connected || !stompClient) return;
+        const v = (messageInput.value || "").trim();
+        if (v.length === 0) return;
+
+        const now = Date.now();
+        const payload = () =>
+          JSON.stringify({
+            type: "TYPING",
+            sender: mySender,
+            timestamp: Date.now(),
+            clientId,
+          });
+
+        if (now - lastTypingEmit >= TYPING_THROTTLE_MS) {
+          lastTypingEmit = now;
+          stompClient.send(APP_TYPING, {}, payload());
+          return;
+        }
+        clearTimeout(typingSendTimer);
+        typingSendTimer = setTimeout(() => {
+          lastTypingEmit = Date.now();
+          stompClient.send(APP_TYPING, {}, payload());
+        }, TYPING_THROTTLE_MS - (now - lastTypingEmit));
+      }
+
+      function setUploadProgress(pct) {
+        if (!uploadProgressWrap || !uploadProgressBar || !uploadProgressText) return;
+        uploadProgressWrap.classList.remove("hidden");
+        uploadProgressBar.style.width = `${pct}%`;
+        uploadProgressText.textContent = `${pct}%`;
+      }
+
+      function hideUploadProgress() {
+        if (uploadProgressWrap) uploadProgressWrap.classList.add("hidden");
+        if (uploadProgressBar) uploadProgressBar.style.width = "0%";
+        if (uploadProgressText) uploadProgressText.textContent = "0%";
+      }
+
+      function clearFilePreview() {
+        if (previewObjectUrl) {
+          URL.revokeObjectURL(previewObjectUrl);
+          previewObjectUrl = null;
+        }
+        if (filePreviewImg) {
+          filePreviewImg.classList.add("hidden");
+          filePreviewImg.removeAttribute("src");
+        }
+        if (filePreviewWrap) filePreviewWrap.classList.add("hidden");
+        if (filePreviewName) filePreviewName.textContent = "";
+        if (fileInput) fileInput.value = "";
+      }
+
+      function uploadMultipart(file) {
+        return new Promise((resolve, reject) => {
+          const xhr = new XMLHttpRequest();
+          xhr.open("POST", API_UPLOAD);
+          xhr.responseType = "json";
+          xhr.upload.onprogress = (e) => {
+            if (e.lengthComputable) {
+              setUploadProgress(Math.round((e.loaded / e.total) * 100));
+            }
+          };
+          xhr.onload = () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+              resolve(xhr.response);
+            } else {
+              reject(new Error(xhr.statusText || "upload failed"));
+            }
+          };
+          xhr.onerror = () => reject(new Error("network"));
+          const fd = new FormData();
+          fd.append("file", file);
+          xhr.send(fd);
+        });
+      }
+
+      async function handleFileSelected(file) {
+        if (!file || !connected || !stompClient) return;
+
+        clearFilePreview();
+        if (filePreviewName) filePreviewName.textContent = file.name;
+        if (filePreviewWrap) filePreviewWrap.classList.remove("hidden");
+        if (filePreviewImg) {
+          if (file.type && file.type.startsWith("image/")) {
+            previewObjectUrl = URL.createObjectURL(file);
+            filePreviewImg.src = previewObjectUrl;
+            filePreviewImg.classList.remove("hidden");
+          } else {
+            filePreviewImg.classList.add("hidden");
+          }
+        }
+
+        uploadInProgress = true;
+        if (attachBtn) attachBtn.disabled = true;
+        if (sendBtn) sendBtn.disabled = true;
+        setUploadProgress(0);
+
+        try {
+          const res = await uploadMultipart(file);
+          animateSendButton();
+          stompClient.send(
+            APP_SEND,
+            {},
+            JSON.stringify({
+              type: "CHAT",
+              sender: mySender,
+              content: (messageInput.value || "").trim() || null,
+              attachmentUrl: res.url,
+              mimeType: res.mimeType,
+              originalFilename: res.originalFilename,
+              timestamp: Date.now(),
+            })
+          );
+          await clearMessageInputSmoothly();
+          clearFilePreview();
+          hideUploadProgress();
+        } catch (e) {
+          console.error(e);
+          addSystemMessage("Не удалось загрузить файл.");
+          hideUploadProgress();
+        } finally {
+          uploadInProgress = false;
+          if (attachBtn) attachBtn.disabled = !connected;
+          if (sendBtn) sendBtn.disabled = !connected;
+          messageInput.focus();
         }
       }
 
@@ -637,6 +998,10 @@
               renderOnlineUsers(update);
             });
 
+            stompClient.subscribe(TOPIC_TYPING, (frame) => {
+              handleTypingFromServer(parsePayload(frame.body));
+            });
+
             stompClient.subscribe("/topic/history." + clientId, (frame) => {
               const snap = parsePayload(frame.body);
               const msgs = Array.isArray(snap?.messages) ? snap.messages : [];
@@ -676,11 +1041,23 @@
         addSystemMessage("Вы отключились от чата.");
         renderOnlineUsers({ count: 0, users: [] });
         renderHistory();
+        typingPeers.forEach((id) => clearTimeout(id));
+        typingPeers.clear();
+        clearTimeout(typingSendTimer);
+        typingSendTimer = null;
+        lastTypingEmit = 0;
+        updateTypingIndicator();
+        clearFilePreview();
+        hideUploadProgress();
+        uploadInProgress = false;
       }
 
-      function sendMessage() {
+      async function sendMessage() {
+        if (uploadInProgress) return;
         const content = (messageInput.value || "").trim();
         if (!content || !stompClient || !connected) return;
+
+        animateSendButton();
 
         const payload = {
           type: "CHAT",
@@ -690,13 +1067,59 @@
         };
 
         stompClient.send(APP_SEND, {}, JSON.stringify(payload));
-        messageInput.value = "";
-        updateCharCount();
+        await clearMessageInputSmoothly();
         messageInput.focus();
       }
 
       function updateCharCount() {
         charCount.textContent = `${(messageInput.value || "").length} / 2000`;
+      }
+
+      function closeStickerPanel() {
+        if (stickerPanel) stickerPanel.classList.add("hidden");
+      }
+
+      function sendStickerMessage(url) {
+        if (!stompClient || !connected || uploadInProgress) return;
+        animateSendButton();
+        const name = url.split("/").pop() || "sticker.png";
+        stompClient.send(
+          APP_SEND,
+          {},
+          JSON.stringify({
+            type: "CHAT",
+            sender: mySender,
+            content: null,
+            attachmentUrl: url,
+            mimeType: "image/png",
+            originalFilename: name,
+            timestamp: Date.now(),
+          })
+        );
+        closeStickerPanel();
+      }
+
+      function initStickerGrid() {
+        if (!stickerGrid) return;
+        stickerGrid.innerHTML = "";
+        for (const url of STICKER_URLS) {
+          const btn = document.createElement("button");
+          btn.type = "button";
+          btn.className =
+            "flex h-12 w-12 items-center justify-center rounded-lg border border-white/10 bg-white/5 p-0.5 hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-cyan-400/40";
+          btn.setAttribute("aria-label", "Отправить стикер");
+          const img = document.createElement("img");
+          img.src = url;
+          img.alt = "";
+          img.className = "h-full w-full object-contain";
+          img.draggable = false;
+          btn.appendChild(img);
+          btn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            sendStickerMessage(url);
+          });
+          stickerGrid.appendChild(btn);
+        }
       }
 
       connectBtn.addEventListener("click", connect);
@@ -707,7 +1130,10 @@
         addSystemMessage("Чат очищен локально (только у вас).");
       });
 
-      messageInput.addEventListener("input", updateCharCount);
+      messageInput.addEventListener("input", () => {
+        updateCharCount();
+        emitTypingSignal();
+      });
 
       messageInput.addEventListener("keydown", (e) => {
         if (e.key === "Enter" && !e.shiftKey) {
@@ -717,6 +1143,30 @@
       });
 
       sendBtn.addEventListener("click", sendMessage);
+
+      if (attachBtn && fileInput) {
+        attachBtn.addEventListener("click", () => {
+          if (!connected || uploadInProgress) return;
+          fileInput.click();
+        });
+        fileInput.addEventListener("change", () => {
+          const f = fileInput.files && fileInput.files[0];
+          if (f) handleFileSelected(f);
+        });
+      }
+
+      if (stickerBtn && stickerPanel) {
+        stickerBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          if (!connected || uploadInProgress) return;
+          stickerPanel.classList.toggle("hidden");
+        });
+        document.addEventListener("click", (e) => {
+          if (stickerPanel.classList.contains("hidden")) return;
+          if (stickerBtn.contains(e.target) || stickerPanel.contains(e.target)) return;
+          closeStickerPanel();
+        });
+      }
 
       tabButtons.forEach((btn) => {
         btn.addEventListener("click", () => setActiveTab(btn.dataset.tab));
@@ -728,6 +1178,7 @@
       setActiveTab("chat");
       renderOnlineUsers({ count: 0, users: [] });
       renderHistory();
+      initStickerGrid();
     </script>
   </body>
 </html>

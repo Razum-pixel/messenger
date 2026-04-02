@@ -5,7 +5,8 @@ public class ChatMessage {
 	public enum MessageType {
 		JOIN,
 		CHAT,
-		LEAVE
+		LEAVE,
+		TYPING
 	}
 
 	private MessageType type;
@@ -13,6 +14,9 @@ public class ChatMessage {
 	private String content;
 	private long timestamp;
 	private String clientId;
+	private String attachmentUrl;
+	private String mimeType;
+	private String originalFilename;
 
 	public ChatMessage() {
 	}
@@ -62,6 +66,30 @@ public class ChatMessage {
 
 	public void setClientId(String clientId) {
 		this.clientId = clientId;
+	}
+
+	public String getAttachmentUrl() {
+		return attachmentUrl;
+	}
+
+	public void setAttachmentUrl(String attachmentUrl) {
+		this.attachmentUrl = attachmentUrl;
+	}
+
+	public String getMimeType() {
+		return mimeType;
+	}
+
+	public void setMimeType(String mimeType) {
+		this.mimeType = mimeType;
+	}
+
+	public String getOriginalFilename() {
+		return originalFilename;
+	}
+
+	public void setOriginalFilename(String originalFilename) {
+		this.originalFilename = originalFilename;
 	}
 }
 
